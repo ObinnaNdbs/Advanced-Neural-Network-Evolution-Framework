@@ -58,7 +58,8 @@ To showcase familiarity with NVIDIA's libraries and their application in improvi
 2. **Test Accuracy:**  
    - Steady improvement highlights the benefits of efficient computation for both forward and backward passes.
 
-   ![Training and Test Metrics](Screenshot%20(653).png)
+ ![Screenshot (653)](https://github.com/user-attachments/assets/ae7a633a-d668-40b3-8cd4-203de1f6ee75)
+
 
 ---
 
