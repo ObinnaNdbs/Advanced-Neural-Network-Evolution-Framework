@@ -1,4 +1,4 @@
-# **Advanced Deep Learning Project Series**
+# **Advanced Neural Network Evolution Framework**
 
 ## **Overview**
 
