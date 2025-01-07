@@ -21,7 +21,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Fine-tuning ResNet18 pretrained on ImageNet.
   - Achieved **83.84% test accuracy** on CIFAR-10.
 - **Purpose**: Highlight the impact of data diversity and pretrained models on performance.
-- [More details](./version_2/README.md)
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_2/README.md)
 
 ### **Version 3: Custom CUDA Kernel Integration**
 - **Objective**: Accelerate training by integrating custom CUDA kernels into PyTorch workflows.
@@ -29,7 +29,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Custom CUDA kernel for matrix multiplication and activation functions.
   - Achieved **83.03% test accuracy** while significantly reducing training time.
 - **Purpose**: Demonstrate GPU parallelism for efficient deep learning computation.
-- [More details](./version_3/README.md)
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_3/README.md)
 
 ### **Version 4: Incorporation of NVIDIA Libraries**
 - **Objective**: Leverage NVIDIA’s cuDNN and cuBLAS libraries for performance optimization.
@@ -37,7 +37,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Accelerated convolution and matrix multiplication.
   - Achieved **83.10% test accuracy** with optimized memory management.
 - **Purpose**: Showcase expertise in NVIDIA's ecosystem for deep learning acceleration.
-- [More details](./version_4/README.md)
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_4/README.md)
 
 ### **Version 5: Inference Optimization with TensorRT**
 - **Objective**: Optimize inference using TensorRT for real-time AI applications.
@@ -45,7 +45,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Converted ResNet18 from PyTorch to ONNX, followed by TensorRT optimization.
   - Achieved **2.56x inference speedup** over ONNX runtime with no accuracy loss.
 - **Purpose**: Highlight inference optimization techniques critical for deployment.
-- [More details](./version_5/README.md)
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_5/README.md)
 
 ### **Version 6: Advanced Reinforcement Learning and Optimized Performance**
 - **Objective**: Implement advanced reinforcement learning techniques and showcase high-performance training in a Mujoco environment.
@@ -54,7 +54,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Achieved stable, high-reward policies in the challenging Humanoid-v4 environment.
   - ONNX optimization for real-time inference.
 - **Purpose**: Demonstrate mastery of reinforcement learning and scalable deployment techniques.
-- [More details](./version_6/README.md)
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_6/README.md)
 
 ---
 
