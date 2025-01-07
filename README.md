@@ -106,13 +106,6 @@ This project series demonstrates the evolution from basic neural network trainin
 
 ---
 
-## **Future Directions**
-- Incorporating distributed training for scalability across multiple GPUs.
-- Exploring unsupervised and semi-supervised learning techniques.
-- Expanding reinforcement learning applications to robotics and autonomous systems.
-
----
-
 ## **Authors and Contributors**
 - Lead Developer: Obinna Ndubuisi.
 
