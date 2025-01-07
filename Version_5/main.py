@@ -8,7 +8,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torchvision import models
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 import time
 import onnx
@@ -109,7 +108,7 @@ dummy_input = torch.randn(1, 3, 32, 32, device=device)
 
 torch.onnx.export(
     model, dummy_input, onnx_filename,
-    export_params=True, opset_version=16,
+    export_params=True, opset_version=11,
     do_constant_folding=True,
     input_names=['input'], output_names=['output'],
     dynamic_axes={'input': {0: 'batch_size'}, 'output': {0: 'batch_size'}}
@@ -120,6 +119,7 @@ print(f"Model converted to ONNX: {onnx_filename}")
 # Load ONNX Model and Run Inference
 onnx_model = onnx.load(onnx_filename)
 onnx.checker.check_model(onnx_model)
+print("ONNX model is valid!")
 ort_session = ort.InferenceSession(onnx_filename, providers=['CUDAExecutionProvider'])
 
 def onnx_inference(image):
@@ -134,35 +134,79 @@ for data in testloader:
     for img in images:
         onnx_inference(img.cpu())
 end_time = time.time()
-onnx_time = end_time - start_time
-print(f"ONNX Inference Time: {onnx_time:.2f} seconds")
+print(f"ONNX Inference Time: {end_time - start_time:.2f} seconds")
 
-# Convert ONNX to TensorRT
-# trt_logger = trt.Logger(trt.Logger.WARNING)
-trt_logger = trt.Logger(trt.Logger.VERBOSE)  # ✅ Change to VERBOSE mode
+for i in range(network.num_inputs):
+    input_tensor = network.get_input(i)
+    print(f"Input {i}: Name={input_tensor.name}, Shape={input_tensor.shape}, Type={input_tensor.dtype}")
+
+import torch
+import torchvision.models as models
+
+# Reload your model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model = models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
+model.fc = torch.nn.Linear(model.fc.in_features, 10)
+model = model.to(device)
+
+# Define dummy input
+dummy_input = torch.randn(1, 3, 32, 32, device=device)
+
+# Export ONNX model with fixed batch size
+torch.onnx.export(
+    model, dummy_input, "resnet18_cifar10.onnx",
+    opset_version=11, export_params=True, do_constant_folding=True,
+    input_names=['input'], output_names=['output'],
+    dynamic_axes=None  # ❌ Remove dynamic batch size
+)
+
+print("✅ ONNX Model exported successfully.")
+
+
+import tensorrt as trt
+
+# Logger for TensorRT
+trt_logger = trt.Logger(trt.Logger.WARNING)
+
+# Create builder and network
 builder = trt.Builder(trt_logger)
 network = builder.create_network(1)
 parser = trt.OnnxParser(network, trt_logger)
 
+# Read ONNX file
+onnx_filename = "resnet18_cifar10.onnx"
 with open(onnx_filename, 'rb') as model_file:
-    success = parser.parse(model_file.read())
-    for i in range(parser.num_errors):  # ✅ Print all errors
-        print(parser.get_error(i))
-    if not success:
-        raise RuntimeError("Failed to parse ONNX model!")
+    if not parser.parse(model_file.read()):
+        for error in range(parser.num_errors):
+            print(parser.get_error(error))
+        raise RuntimeError("❌ Failed to parse ONNX model!")
 
+print("✅ ONNX model successfully parsed by TensorRT.")
+
+# Configure builder settings
 config = builder.create_builder_config()
-config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 1 << 30)
+config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, 1 << 32)  # Set workspace size to 1GB
 
+# Enable FP16 if supported
+if builder.platform_has_fast_fp16:
+    config.set_flag(trt.BuilderFlag.FP16)
+    print("✅ FP16 Enabled for TensorRT Inference")
+else:
+    print("❌ FP16 Not Supported, Running in FP32")
+
+# Build the TensorRT engine
 serialized_engine = builder.build_serialized_network(network, config)
 if serialized_engine is None:
-    raise RuntimeError("Failed to build TensorRT engine!")
+    raise RuntimeError("❌ Failed to build TensorRT engine!")
 
 # Save TensorRT Engine
 engine_path = "resnet18_cifar10.trt"
 with open(engine_path, "wb") as f:
     f.write(serialized_engine)
-print(f"TensorRT Engine saved: {engine_path}")
+
+print(f"✅ TensorRT Engine saved: {engine_path}")
+
+import numpy as np
 
 # Load TensorRT Engine
 runtime = trt.Runtime(trt_logger)
@@ -174,38 +218,57 @@ if engine is None:
     raise RuntimeError("Failed to deserialize TensorRT engine!")
 
 context = engine.create_execution_context()
+input_shape = (1, 3, 32, 32)
+input_size = torch.prod(torch.tensor(input_shape)).item()
 
 # Allocate Memory
-d_input = cuda.mem_alloc(1 * 3 * 32 * 32 * 4)  # FP32 = 4 bytes
-d_output = cuda.mem_alloc(10 * 4)
+d_input = cuda.mem_alloc(input_size * 4)  # FP32 = 4 bytes
+d_output = cuda.mem_alloc(10 * 4)  # 10 classes
 stream = cuda.Stream()
 
 def trt_inference(image):
-    image = image.numpy().astype('float32')
-    cuda.memcpy_htod_async(d_input, image, stream)
-    context.execute_async_v2([d_input.ptr, d_output.ptr], stream.handle)
-    stream.synchronize()
-    output = np.empty(10, dtype='float32')  # ✅ Faster than pagelocked_empty
-    cuda.memcpy_dtoh_async(output, d_output, stream)
+    image = image.cpu().numpy().astype('float32')
+
+    # ✅ Reshape input to match (1, 3, 32, 32)
+    image = image.reshape((1, 3, 32, 32))
+
+    # Copy input data to device memory
+    cuda.memcpy_htod(d_input, image)
+
+    # Run inference (synchronous execution)
+    context.execute_v2([int(d_input), int(d_output)])
+
+    # Copy output back to CPU
+    output = np.empty(10, dtype=np.float32)  # Assuming 10 classes
+    cuda.memcpy_dtoh(output, d_output)
+
     return output
 
-# Measure TensorRT Inference Time
-start_time_trt = time.time()
-for data in testloader:
-    images, labels = data[0].to(device), data[1].to(device)
+
+# Measure ONNX Inference Time
+start_time = time.time()
+for batch in testloader:
+    images, labels = batch[0].to(device), batch[1].to(device)
     for img in images:
-        trt_inference(img.cpu())
-end_time_trt = time.time()
-trt_time = end_time_trt - start_time_trt
+        onnx_inference(img.cpu())  # ✅ Correct
+        # onnx_inference(img.unsqueeze(0).cpu())  # ONNX Inference
+end_time = time.time()
+onnx_time = end_time - start_time
+print(f"ONNX Inference Time: {onnx_time:.2f} seconds")
+
+# Measure TensorRT Inference Time
+start_time = time.time()
+for batch in testloader:
+    images, labels = batch[0].to(device), batch[1].to(device)
+    for img in images:
+        trt_inference(img.unsqueeze(0).cpu())  # TensorRT Inference
+end_time = time.time()
+trt_time = end_time - start_time
 print(f"TensorRT Inference Time: {trt_time:.2f} seconds")
 
-# Compare Speedup
+# Correct Speedup Calculation
 speedup = onnx_time / trt_time
 print(f"TensorRT Speedup over ONNX: {speedup:.2f}x")
-
-# Clean up memory
-del context
-torch.cuda.empty_cache()
 
 # Plot Training Loss and Accuracy
 plt.figure(figsize=(12, 5))
@@ -226,3 +289,5 @@ plt.legend()
 
 plt.tight_layout()
 plt.show()
+
+
