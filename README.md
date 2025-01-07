@@ -12,7 +12,7 @@ This project series showcases a progressive exploration of cutting-edge deep lea
   - Basic training and testing loops.
   - Achieved **76% test accuracy** on CIFAR-10.
 - **Purpose**: Serve as a foundational benchmark for later advancements.
-- [More details]([./version_1/README.md](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_1/README.md))
+- [More details](https://github.com/ObinnaNdbs/NVIDIA-Optimized-Neural-Network-Evolution-Framework/blob/main/Version_1/README.md)
 
 ### **Version 2: Data Augmentation and Pretrained Model**
 - **Objective**: Improve generalization and accuracy using data augmentation and transfer learning.
